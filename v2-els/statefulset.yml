@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: master
+spec:
+  serviceName: els-master-svc
+  replicas: 2
+  selector:
+    matchLabels:
+      app: elasticsearch-master
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-master
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
+        imagePullPolicy: IfNotPresent    
+
+        ports:
+        - containerPort: 9200
+          name: api
+          protocol: TCP
+        - containerPort: 9300
+          name: nodes
+          protocol: TCP
+        volumeMounts:
+        - name: es-data
+          mountPath: /usr/share/elasticsearch/data
+        env:
+          - name: cluster.name
+            value: "elastic-search-v2"
+          - name: node.name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: discovery.seed_hosts
+            value: master-0.els-master-svc,master-1.els-master-svc
+          - name: cluster.initial_master_nodes
+            value: master-0, master-1
+          - name: ES_JAVA_OPTS
+            value: "-Xms512m -Xmx512m"
+          - name: node.roles
+            value: master
+      initContainers:
+      - name: increase-vm-max-map
+        image: alpine
+        imagePullPolicy: IfNotPresent
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+
+  volumeClaimTemplates:
+  - metadata:
+      name: es-data
+      labels:
+        app: elasticsearch-master
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: mystorage
+      resources:
+        requests:
+          storage: 300Mi
+ 

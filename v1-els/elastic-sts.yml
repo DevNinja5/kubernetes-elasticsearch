@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  selector:
+    matchLabels:
+      app: demo-els
+  serviceName: els-service
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: demo-els
+    spec:
+      containers:
+      - name: els
+        env:
+        - name: discovery.type
+          value: single-node
+        image: elasticsearch:6.8.20
+        ports:
+        - containerPort: 9200
+          name: web
+        - containerPort: 9300
+          name: log
+      #   volumeMounts:
+      #   # - name: data
+      #   #   mountPath: /els-data/
+      #   - name: conf
+      #     mountPath: /usr/share/elasticsearch/config
+      # volumes:
+      #   - name: conf
+      #     configMap:
+      #       name: config-master
+  # volumeClaimTemplates:
+  # - metadata:
+  #     name: data
+  #   spec:
+  #     storageClassName: manual
+  #     accessModes: [ "ReadWriteOnce" ]
+  #     resources:
+  #       requests:
+  #         storage: 100Mi
+
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: els-service
+spec:
+  # type: NodePort
+  clusterIP: None
+  selector:
+    app: demo-els
+  ports:
+  - port: 9200
+    protocol: TCP
+    name: web
+    targetPort: 9200
+  - port: 9300
+    targetPort: 9300
+    name: log
+    protocol: TCP
+

@@ -1,0 +1,29 @@
+#Data's configMap file
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-data
+data:
+  elasticsearch.yml: |
+    cluster.name: demo-rahul
+    node.name: data-node
+    network.host: 0.0.0.0
+    discovery.seed_hosts: ["data-master"]
+    cluster.initial_master_nodes: ["master-0"]
+
+---
+
+#Master's configMap file
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-master
+data:
+  elasticsearch.yml: |
+    cluster.name: demo-rahul
+    node.name: master-node
+    network.host: 0.0.0.0
+    discovery.seed_hosts: ["data-master"]
+    cluster.initial_master_nodes: ["master-0"]
+
+

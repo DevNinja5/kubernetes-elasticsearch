@@ -1,0 +1,165 @@
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: data-master
+# spec:
+#   selector:
+#     des: master
+#   ports:
+#   - port: 9200
+#     name: web
+#     targetPort: 9200
+#   - port: 9300
+#     name: client
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: masters-headless
+spec:
+  clusterIP: None
+  selector:
+    des: master
+  ports:
+  - port: 9200
+    name: web
+    targetPort: 9200
+  - port: 9300
+    name: client
+    targetPort: 9300
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: datas-headless
+# spec:
+#   clusterIP: None
+#   selector:
+#     des: data
+#   ports:
+#   - port: 9200
+#     name: web
+#     targetPort: 9200
+#   - port: 9300
+#     name: client
+#     targetPort: 9300
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: master
+  labels:
+    des: master
+spec:
+  selector:
+    matchLabels:
+      des: master
+  serviceName: masters-headless
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        des: master
+    spec:
+      initContainers:
+      - name: increase-vm-max-map
+        imagePullPolicy: IfNotPresent
+        image: alpine
+        command: ["sysctl", "w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
+
+      containers:
+      - name: master
+        env:
+        - name: cluster.name
+          value: elastic-demo
+        - name: node.name
+          value: master-0
+        - name: discovery.seed_hosts
+          value: master-0.masters-headless
+        - name: cluster.initial_master_nodes
+          value: master-0
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: node.roles
+          value: master
+        image:  elasticsearch:6.8.20
+        ports:
+        - containerPort: 9200
+          name: web
+        - containerPort: 9300
+          name: client
+        volumeMounts:
+        - name: nfs-pv
+          mountPath: /usr/share/elasticsearch/data
+
+      # volumes:
+      #   - name: master-config
+      #     configMap:
+      #       name: config-master
+  volumeClaimTemplates:
+  - metadata:
+      name: nfs-pv
+    spec:
+      storageClassName: manual
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 500Mi
+
+
+
+# ---
+# apiVersion: apps/v1
+# kind: StatefulSet
+# metadata:
+#   name: data
+#   labels:
+#     des: data
+# spec:
+#   selector:
+#     matchLabels:
+#       des: data
+#   serviceName: datas-headless
+#   replicas: 1
+#   volumeClaimTemplates:
+#   - metadata:
+#       name: nfs-pv-data
+#     spec:
+#       storageClassName: manual
+#       accessModes: [ "ReadWriteOnce" ]
+#       resources:
+#         requests:
+#           storage: 100Mi
+#   template:
+#     metadata:
+#       labels:
+#         des: data
+#     spec:
+#       containers:
+#       - name: data
+#         command: ["/bin/bash"]
+#         args: ["-c","chmod 777 /usr/share/elasticsearch;"]
+#         env:
+#         - name: discovery.type
+#           value: single-node
+#         image:  elasticsearch:6.8.20
+#         ports:
+#         - containerPort: 9200
+#           name: web
+#         - containerPort: 9300
+#           name: client
+#         volumeMounts:
+#         - name: data-config
+#           mountPath: /usr/share/elasticsearch/config
+
+#       volumes:
+#         - name: data-config
+#           configMap:
+#             name: config-data
+#             items:
+#             - key: "elasticsearch.yml"
+#               path: "elasticsearch.yml"
