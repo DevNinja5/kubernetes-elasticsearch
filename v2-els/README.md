@@ -52,3 +52,12 @@ Forwarding from [::1]:9200 -> 9200
 ```
 localhost:9200/_cat/nodes
 ```
+
+**It should lool like this if all are good**
+
+```
+172.17.0.5 65 5 16 2.15 2.33 3.46 m * master-0
+172.17.0.7 48 4 16 2.15 2.33 3.46 d - data-0
+172.17.0.8 41 5 16 2.15 2.33 3.46 d - data-1
+172.17.0.6 53 5 16 2.15 2.33 3.46 m - master-1
+```
